@@ -403,6 +403,23 @@ static void sig_handler(int sigio) {
 }
 */
 
+static void set_gtw_hostname(void) {  
+    uint8_t mac[6];  
+    char hostname[16];  
+      
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);  
+      
+    snprintf(hostname, sizeof(hostname), "ESXP32-%02x%02x%02x",   
+             mac[3], mac[4], mac[5]);  
+      
+    esp_netif_t *netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");  
+    if (netif) {  
+        esp_netif_set_hostname(netif, hostname);  
+    }  
+      
+    ESP_LOGI(WIFI_TAG, "Hostname set to: %s", hostname);  
+}
+
 void Init_Led( void )
 {
     esp_rom_gpio_pad_select_gpio( LED_BLUE_GPIO );
@@ -4137,6 +4154,7 @@ void wifi_init_sta(void)
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
+    set_gtw_hostname();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
