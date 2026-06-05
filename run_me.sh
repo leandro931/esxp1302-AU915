@@ -32,6 +32,7 @@ prepare_c_head_file_from_files() {
 	json_cn_file=$conf_dir/global_conf.cn490.json
 	json_eu_file=$conf_dir/global_conf.eu868.json
 	json_us_file=$conf_dir/global_conf.us915.json
+	json_au_file=$conf_dir/global_conf.au915.json
 
 	# prepare the webpage by dumping it to a string
 	scripts/dump_html.py $web_file webpage_str > $web_hd_name
@@ -52,6 +53,12 @@ prepare_c_head_file_from_files() {
 	echo '// dump from global_conf.us915.json as string array' >> $hd_name
 	echo 'const static uint8_t global_us_conf[] = {' >> $hd_name
 	scripts/json_to_hex_array.py $json_us_file >> $hd_name
+	echo '};\n' >> $hd_name
+
+	# prepare the C array comes from global_conf.au915.json
+	echo '// dump from global_conf.au915.json as string array' >> $hd_name
+	echo 'const static uint8_t global_au_conf[] = {' >> $hd_name
+	scripts/json_to_hex_array.py $json_au_file >> $hd_name
 	echo '};\n' >> $hd_name
 
 	# indent the code by prefix 4 ' '.

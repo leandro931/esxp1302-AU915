@@ -1653,6 +1653,9 @@ int pkt_fwd_main(void)
         } else if(strncmp(config[FREQ_REGION].val, "us915", 5) == 0){
             conf_array = malloc(sizeof(global_us_conf));
             memcpy(conf_array, global_us_conf, sizeof(global_us_conf));
+        } else if(strncmp(config[FREQ_REGION].val, "au915", 5) == 0){
+            conf_array = malloc(sizeof(global_au_conf));
+            memcpy(conf_array, global_au_conf, sizeof(global_au_conf));
         } else {
             conf_array = malloc(sizeof(global_cn_conf));
             memcpy(conf_array, global_cn_conf, sizeof(global_cn_conf));
@@ -1824,7 +1827,7 @@ int pkt_fwd_main(void)
         exit(EXIT_FAILURE);
     }
 
-#if 0  // TODO
+#if 1  // TODO
     /* get the concentrator EUI */
     uint64_t eui;
     i = lgw_get_eui(&eui);

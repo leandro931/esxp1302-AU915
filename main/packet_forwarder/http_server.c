@@ -199,6 +199,17 @@ char *assemble_webpage(const char *webpage_str)
                 buf += 8;
             }
         }
+        else if(strncmp(config[FREQ_REGION].val, "au915", config[FREQ_REGION].len) == 0){
+            fwd = strstr(last, ">AU915");
+            if(fwd){
+                fwd -= href_len;
+                strncpy(buf, last, fwd - last);
+                buf += fwd - last;
+                last = fwd;
+                strncpy(buf, " checked", 9);
+                buf += 8;
+            }
+        }
     }
 
     if(config[FREQ_RADIO0].val != NULL){
@@ -408,6 +419,8 @@ static esp_err_t gw_json_conf_handler(httpd_req_t *req)
         assemble_json_str((char *)global_eu_conf + 2);
     else if(strncmp((const char *) req->user_ctx, "us915", 5) == 0)
         assemble_json_str((char *)global_us_conf + 2);
+    else if(strncmp((const char *) req->user_ctx, "au915", 5) == 0)
+        assemble_json_str((char *)global_au_conf + 2);
 
     httpd_resp_send(req, (const char *)json_conf_buf, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
@@ -469,6 +482,14 @@ static const httpd_uri_t us915_json_conf = {
     .user_ctx  = "us915"
 };
 
+// return au915 json config
+static const httpd_uri_t au915_json_conf = {
+    .uri       = "/au915",
+    .method    = HTTP_GET,
+    .handler   = gw_json_conf_handler,
+    .user_ctx  = "au915"
+};
+
 static httpd_handle_t start_web_server(void)
 {
     httpd_handle_t server = NULL;
@@ -490,6 +511,7 @@ static httpd_handle_t start_web_server(void)
         httpd_register_uri_handler(server, &cn470_json_conf);
         httpd_register_uri_handler(server, &eu868_json_conf);
         httpd_register_uri_handler(server, &us915_json_conf);
+        httpd_register_uri_handler(server, &au915_json_conf);
 
         return server;
     }

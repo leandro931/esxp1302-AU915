@@ -27,7 +27,7 @@
 			}
 
 			input {
-			  font: 1em sans-serif;
+			  font: 1em 'Courier New', Courier, monospace;
 
 			  /* Uniform text field size */
 			  width: 300px;
@@ -51,7 +51,7 @@
 
                 if(freq_radio0 && /^[4-9]\d{8}$/.test(freq_radio0) == false)
                     err_msg += "Freq Radio0: value should be between 470000000 and 930000000.\n";
-                if(freq_radio1 && /^[4-9]\d{8}$/.test(freq_radio0) == false)
+                if(freq_radio1 && /^[4-9]\d{8}$/.test(freq_radio1) == false)
                     err_msg += "Freq Radio1: value should be between 470000000 and 930000000.\n";
                 if(wifi_pswd && wifi_pswd.length < 8)
                     err_msg += "Wi-Fi Password: too short; minimum length is 8 characters\n";
@@ -64,7 +64,7 @@
                 if(gw_id && /^[0-9A-Fa-f]{16}$/.test(gw_id) == false)
                     err_msg += "Gateway ID: only hex(0-9A-Fa-f) value allowed, and exactly 16 characters.\n";
 
-                for(let i = 0; i <= 2; i++){
+                for(let i = 0; i <= 3; i++){
                     if(obj.freq_region[i].checked){
                         freq_region_in_use = obj.freq_region[i].value;
                         break;
@@ -94,6 +94,12 @@
                             err_msg += "Either Radio0 or Radio1 doesn't match Frequency Plan\n";
                         }
                     }
+                    else if(freq_region_in_use == "au915"){
+                        if(freq_radio0 < 915000000 || freq_radio0 > 928000000
+                                || freq_radio1 < 915000000 || freq_radio1 > 928000000){
+                            err_msg += "Either Radio0 or Radio1 doesn't match Frequency Plan\n";
+                        }
+                    }
                 }
 
                 if(err_msg){
@@ -113,20 +119,21 @@
 				<i>Leave it empty if you want the old value not be changed</i>
 			</label><br><br><br>
 
-			<label for='wifi_mode' style='width: 180px; text-align: center'><b>Next time Boot to:</b></label><br><br>
+			<label for='wifi_mode' style='width: 180px; text-align: center'><b>Next time boot to:</b></label><br><br>
 			<input type='radio' id='soft_ap' name='wifi_mode' value='soft_ap' style='width: 20px'>Soft AP Mode
 			<input type='radio' id='station' name='wifi_mode' value='station' style='width: 20px'>Station Mode
 			<br><br><hr size="1"><br>
 
-			<label for='freq_region' style='width: 150px'><b>Frequency Plan:</b></label><br><br>
+			<label for='freq_region' style='width: 180px; text-align: center'><b>Frequency plan:</b></label><br><br>
 			<input type='radio' id='cn470' name='freq_region' value='cn470' style='width: 20px'><a href="cn470">CN470</a>
 			<input type='radio' id='eu868' name='freq_region' value='eu868' style='width: 20px'><a href="eu868">EU868</a>
 			<input type='radio' id='us915' name='freq_region' value='us915' style='width: 20px'><a href="us915">US915</a>
+			<input type='radio' id='au915' name='freq_region' value='au915' style='width: 20px'><a href="au915">AU915</a>
 			<br><br>
 
-			<label for='freq_radio0' style='width: 280px; text-align: left'>Radio 1 Center Frequency:</label>
+			<label for='freq_radio0' style='width: 300px; text-align: left'>Radio 1 Center Frequency:</label>
 			<input type='text' id='freq_radio0' name='freq_radio0'><label style='width: 0px'>Hz</label><br><br>
-			<label for='freq_radio1' style='width: 280px; text-align: left'>Radio 2 Center Frequency:</label>
+			<label for='freq_radio1' style='width: 300px; text-align: left'>Radio 2 Center Frequency:</label>
 			<input type='text' id='freq_radio1' name='freq_radio1'><label style='width: 0px'>Hz</label>
 			<br><br><hr size="1"><br>
 
