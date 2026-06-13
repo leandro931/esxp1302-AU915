@@ -15,6 +15,7 @@ License: Revised BSD License, see LICENSE.TXT file include in the project
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include <stdbool.h>
 #include <stdint.h>
 #include "driver/gpio.h"
 
@@ -35,4 +36,5 @@ void vDaemonLedIndication( void );
 void vUplinkFlash ( uint16_t period );
 void vDownlinkFlash ( uint16_t period );
 void vBackhaulFlash ( uint16_t period );
+void vSetApMode ( bool active );
 

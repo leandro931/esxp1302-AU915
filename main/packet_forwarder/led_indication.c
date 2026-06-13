@@ -13,6 +13,7 @@ License: Revised BSD License, see LICENSE.TXT file include in the project
 */
 
 #include "led_indication.h"
+#include <stdbool.h>
 
 static SemaphoreHandle_t mx_led_up;         /* control access to the counter of LED indicator of upstream */
 static SemaphoreHandle_t mx_led_down;       /* control access to the counter of LED indicator of downstream */
@@ -21,6 +22,10 @@ static SemaphoreHandle_t mx_led_backhaul;   /* control access to the counter of 
 static int16_t sUplinkCounter = 0;
 static int16_t sDownlinkCounter = 0;
 static int16_t sBackhaulCounter = 0;
+
+/* AP mode flag: when true, suppress individual LEDs and blink white instead */
+static volatile bool sApMode = false;
+static int16_t sApBlinkTick = 0;
 
 void led_set_level(gpio_num_t gpio_num, unsigned int level){
     if (gpio_num != GPIO_NUM_NC){
@@ -37,6 +42,26 @@ void vDaemonLedIndication( void )
 
     for( ;;) {
         vTaskDelay( 30 / portTICK_PERIOD_MS);
+
+        if (sApMode) {
+            /* AP mode: blink white (all three LEDs on) 300 ms on / 300 ms off.
+             * No individual LED activity is allowed while in AP mode. */
+            sApBlinkTick++;
+            if (sApBlinkTick < 10) {
+                /* LEDs on (white) */
+                led_set_level( LED_GREEN_GPIO, 0 );
+                led_set_level( LED_RED_GPIO,   0 );
+                led_set_level( LED_BLUE_GPIO,  0 );
+            } else if (sApBlinkTick < 20) {
+                /* LEDs off */
+                led_set_level( LED_GREEN_GPIO, 1 );
+                led_set_level( LED_RED_GPIO,   1 );
+                led_set_level( LED_BLUE_GPIO,  1 );
+            } else {
+                sApBlinkTick = 0;
+            }
+            continue;
+        }
 
         if ( sUplinkCounter > 0 ) {
             xSemaphoreTake(mx_led_up, portMAX_DELAY);
@@ -119,4 +144,10 @@ void vBackhaulFlash ( uint16_t period )
     xSemaphoreTake(mx_led_backhaul, portMAX_DELAY);
     sBackhaulCounter += period;
     xSemaphoreGive(mx_led_backhaul);
+}
+
+void vSetApMode ( bool active )
+{
+    sApMode = active;
+    sApBlinkTick = 0;
 }

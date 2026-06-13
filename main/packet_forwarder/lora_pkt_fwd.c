@@ -4395,6 +4395,13 @@ void app_main(void)
         ESP_LOGI(BOOT_TAG, "ESP_WIFI_MODE_SOFT_AP");
         wifi_init_soft_ap();
 
+        // Start LED daemon in AP mode: blinks white to signal the gateway is in AP mode
+        Init_Led();
+        vSetApMode(true);
+        if( xTaskCreatePinnedToCore(((TaskFunction_t) vDaemonLedIndication), "led_flash", 4096, (void *)pLed, 1, NULL, tskNO_AFFINITY) == errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY) {
+            printf( "Failed to spawn led_flash (AP mode)\n");
+        }
+
         oled_show_one_line(0, 3, "IP=192.168.4.1", 2);
         oled_show_one_line(0, 5, "Soft AP mode", 1);
 

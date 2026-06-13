@@ -93,6 +93,46 @@ User can blindly install both drivers, or identifies the USB-to-UART bridge on t
 One way to identify the bridge under Linux is using the `lsusb` command. Run it would give output similar as **Bus 002 Device 027: ID 10c4:ea60 Silicon Labs `CP210x` UART Bridge** or **Bus 002 Device 025: ID 1a86:7523 QinHeng Electronics `CH340` serial converter**.
 
 
+## LED Operation
+
+The gateway has three LEDs that indicate different aspects of its operation: **Green**, **Red**, and **Blue**. Their behavior depends on the current Wi-Fi mode.
+
+### AP Mode — White blink
+
+When the gateway is operating in **Soft AP mode** (configuration mode), all three LEDs blink together in **white** (all three colours on simultaneously) with a **300 ms on / 300 ms off** pattern. This is the only LED activity in AP mode — the individual green, red, and blue indications described below are suppressed, as there is no LoRa or network-server communication taking place.
+
+### Station Mode — Individual LEDs
+
+Once the gateway connects to Wi-Fi and starts forwarding packets, the LEDs indicate specific events:
+
+#### Green LED — Uplink (LoRa RX)
+
+The green LED flashes whenever the gateway receives one or more LoRa packets from end-nodes (uplink traffic). Each flash lasts approximately **300 ms**.
+
+#### Red LED — Downlink (LoRa TX)
+
+The red LED flashes whenever the gateway successfully transmits a packet to an end-node (downlink traffic). Each flash lasts approximately **300 ms**.
+
+#### Blue LED — Backhaul (Network Server communication)
+
+The blue LED flashes on any network-level exchange with the Network Server (NS):
+- When a **PUSH_ACK** is received from the NS, confirming that an uplink packet was delivered.
+- When **any datagram** is received on the downstream socket from the NS (either a `PULL_ACK` or a `PULL_RESP` carrying a downlink command).
+
+Each flash lasts approximately **300 ms**.
+
+### Summary table
+
+| Mode        | LED(s)             | Event                                       | Pattern              |
+|-------------|--------------------|--------------------------------------------|----------------------|
+| AP mode     | White   | Gateway is in Soft AP / configuration mode  | 300 ms blinking period |
+| Station mode| Green              | LoRa packet(s) received from end-node       | ~300 ms flash        |
+| Station mode| Red                | Packet successfully transmitted to end-node | ~300 ms flash        |
+| Station mode| Blue               | Data exchanged with the Network Server      | ~300 ms flash        |
+
+> **Note:** The flash duration is determined by the LED daemon task, which decrements a counter once every 30 ms. Each event call passes a period of 10 counts, resulting in a ~300 ms on-time. If multiple events occur in quick succession the LED stays on for the combined duration. In AP mode, the white blink uses a fixed 10-tick on / 10-tick off cycle (600 ms period) driven by the same 30 ms tick.
+
+
 ## Other Useful Documents
 
 For other useful information, please refer to other documents included in the project, include the `README.md`, and a few others located in the folder `doc` including `esxp1302_upgrade_notes.md`, `notes_tips.md` and `todo_issue_list.md`.
