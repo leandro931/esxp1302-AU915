@@ -4359,15 +4359,15 @@ void app_main(void)
     sprintf(out_info,   "            (v%s)", EXSP1302_VERSION);
     oled_show_one_line(0, 2, out_info, 1);
 
-    gpio_set_direction(USER_BUTTON_1, GPIO_MODE_INPUT);
-    gpio_set_direction(USER_BUTTON_2, GPIO_MODE_INPUT);
+    if(USER_BUTTON_1 != GPIO_NUM_NC) gpio_set_direction(USER_BUTTON_1, GPIO_MODE_INPUT);
+    if(USER_BUTTON_2 != GPIO_NUM_NC) gpio_set_direction(USER_BUTTON_2, GPIO_MODE_INPUT);
 
     if(BUTTON_PRESSED == 0){
-        gpio_pullup_en(USER_BUTTON_1);
-        gpio_pullup_en(USER_BUTTON_2);
+        if(USER_BUTTON_1 != GPIO_NUM_NC) gpio_pullup_en(USER_BUTTON_1);
+        if(USER_BUTTON_2 != GPIO_NUM_NC) gpio_pullup_en(USER_BUTTON_2);
     } else {
-        gpio_pulldown_en(USER_BUTTON_1);
-        gpio_pulldown_en(USER_BUTTON_2);
+        if(USER_BUTTON_1 != GPIO_NUM_NC) gpio_pulldown_en(USER_BUTTON_1);
+        if(USER_BUTTON_2 != GPIO_NUM_NC) gpio_pulldown_en(USER_BUTTON_2);
     }
 
     read_config_from_nvs();
