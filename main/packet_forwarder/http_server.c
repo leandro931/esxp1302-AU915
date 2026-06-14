@@ -313,7 +313,7 @@ char *assemble_webpage(const char *webpage_str)
     if(fwd){
         uint8_t mac[6];
         char mac_str[18];
-        esp_read_mac(mac, ESP_MAC_WIFI_STA);
+        esp_wifi_get_mac(ESP_IF_WIFI_STA, mac);
         snprintf(mac_str, sizeof(mac_str), "%02X:%02X:%02X:%02X:%02X:%02X",
                  mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
         strncpy(buf, last, fwd - last);
