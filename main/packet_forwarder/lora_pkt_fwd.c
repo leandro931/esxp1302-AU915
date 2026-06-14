@@ -261,8 +261,7 @@ static bool xtal_correct_ok = false; /* set true when XTAL correction is stable 
 static double xtal_correct = 1.0;
 
 /* GPS configuration and synchronization */
-static char gps_tty_path[64] = "\0"; /* path of the TTY port GPS is connected on */
-static int gps_tty_fd = -1; /* file descriptor of the GPS TTY port */
+static uart_port_t gps_uart_num = UART_NUM_1; /* uart port number for GPS */
 static bool gps_enabled = false; /* is GPS enabled on that gateway ? */
 
 /* GPS time reference */
@@ -308,7 +307,6 @@ static unsigned int meas_nb_beacon_rejected = 0; /* count beacon rejected for qu
 static SemaphoreHandle_t mx_meas_gps; /* control access to the GPS statistics */
 static bool gps_coord_valid; /* could we get valid GPS coordinates ? */
 static struct coord_s meas_gps_coord; /* GPS position of the gateway */
-static struct coord_s meas_gps_err; /* GPS position of the gateway */
 
 static SemaphoreHandle_t mx_stat_rep; /* control access to the status report */
 static bool report_ready = false; /* true when there is a new report to send to the server */
@@ -363,6 +361,8 @@ TaskHandle_t pThreadUp;
 TaskHandle_t pLed;
 TaskHandle_t pkt_fwd_handle;
 TaskHandle_t mqtt_handle;
+TaskHandle_t gps_handle;
+TaskHandle_t valid_handle;
 
 
 //static void sig_handler(int sigio);
@@ -1232,14 +1232,6 @@ static int parse_gateway_configuration(const char * conf_array) {
     }
     MSG("INFO: packets received with no CRC will%s be forwarded\n", (fwd_nocrc_pkt ? "" : " NOT"));
 
-    /* GPS module TTY path (optional) */
-    str = json_object_get_string(conf_obj, "gps_tty_path");
-    if (str != NULL) {
-        strncpy(gps_tty_path, str, sizeof gps_tty_path);
-        gps_tty_path[sizeof gps_tty_path - 1] = '\0'; /* ensure string termination */
-        MSG("INFO: GPS serial port path is configured to \"%s\"\n", gps_tty_path);
-    }
-
     /* get reference coordinates */
     val = json_object_get_value(conf_obj, "ref_latitude");
     if (val != NULL) {
@@ -1702,17 +1694,16 @@ int pkt_fwd_main(void)
     gps_enabled = false;
     gps_ref_valid = false;
 
-#if 0
-//#ifndef GPS_DISABLE
-    i = lgw_gps_enable("ATGM336H", 0, &gps_tty_fd); /* HAL only supports atgm336h or u-blox 7 for now */
+#ifndef GPS_DISABLE
+    i = lgw_gps_enable("ATGM336H", 0, gps_uart_num); /* HAL only verified with ATGM336H */
     if (i != LGW_GPS_SUCCESS) {
-        printf("WARNING: [main] impossible to open %s for GPS sync (check permissions)\n", gps_tty_path);
+        printf("WARNING: [main] enable GPS failed\n");
         gps_enabled = false;
         gps_ref_valid = false;
     } else {
-        printf("INFO: [main] TTY port %s open for GPS synchronization\n", gps_tty_path);
-        //gps_enabled = true;
-        //gps_ref_valid = false;
+        printf("INFO: [main] enable GPS succeeded\n");
+        gps_enabled = true;
+        gps_ref_valid = false;
     }
 #endif
 
@@ -1871,25 +1862,14 @@ int pkt_fwd_main(void)
     out_info[22] = '\0';
     oled_show_one_line(0, 5, out_info, 1);
 
-#if 0
-    /* threads */
-    pthread_t thrid_gps;
-    pthread_t thrid_valid;
-
     /* spawn thread to manage GPS */
     if (gps_enabled == true) {
-        i = pthread_create(&thrid_gps, NULL, (void * (*)(void *))thread_gps, NULL);
-        if (i != 0) {
-            MSG("ERROR: [main] impossible to create GPS thread\n");
-            exit(EXIT_FAILURE);
-        }
-        i = pthread_create(&thrid_valid, NULL, (void * (*)(void *))thread_valid, NULL);
-        if (i != 0) {
-            MSG("ERROR: [main] impossible to create validation thread\n");
-            exit(EXIT_FAILURE);
-        }
+        printf( "spawn thread_gps...\n");
+        xTaskCreate((TaskFunction_t) thread_gps, "thread_gps", 4096, (void *)gps_handle, 6, NULL);
+
+        printf( "spawn thread_valid...\n");
+        xTaskCreate((TaskFunction_t) thread_valid, "thread_valid", 4096, (void *)valid_handle, 6, NULL);
     }
-#endif
 
     /* main loop task: statistics collection */
     while (!exit_sig && !quit_sig) {
@@ -1906,18 +1886,6 @@ int pkt_fwd_main(void)
             strftime(stat_timestamp, sizeof stat_timestamp, "%F %T Z", gmtime(&t));
             if(wifi_ready == true)  // only update time if wifi is ready
                 oled_show_one_line(0, 6, stat_timestamp, 1);
-
-            if (gps_enabled){
-                // Read data from GPS UART.
-                uint8_t data[1024];
-                int length, min;
-
-                ESP_ERROR_CHECK(uart_get_buffered_data_len(gps_tty_fd, (size_t *)&length));
-                min = (length < 1024) ? length : 1024;
-                length = uart_read_bytes(gps_tty_fd, data, min, 100);
-                data[min] = '\0';
-                //printf("GPS Raw Data -------> length = %d, min = %d:\n%s\n", length, min, data);
-            }
         }
         strftime(stat_timestamp, sizeof stat_timestamp, "%F %T %Z", gmtime(&t));
 
@@ -2115,7 +2083,7 @@ int pkt_fwd_main(void)
         pthread_cancel(thrid_gps); /* don't wait for GPS thread, no access to concentrator board */
         pthread_cancel(thrid_valid); /* don't wait for validation thread, no access to concentrator board */
 
-        i = lgw_gps_disable(gps_tty_fd);
+        i = lgw_gps_disable(gps_uart_num);
         if (i == LGW_HAL_SUCCESS) {
             MSG("INFO: GPS closed successfully\n");
         } else {
@@ -3564,7 +3532,7 @@ static void gps_process_sync(void)
     struct timespec gps_time;
     struct timespec utc;
     unsigned int trig_tstamp; /* concentrator timestamp associated with PPM pulse */
-    int i = lgw_gps_get(&utc, &gps_time, NULL, NULL);
+    int i = lgw_gps_get(&utc, &gps_time, NULL);
 
     /* get GPS time for synchronization */
     if (i != LGW_GPS_SUCCESS) {
@@ -3594,15 +3562,13 @@ static void gps_process_coords(void)
 {
     /* position variable */
     struct coord_s coord;
-    struct coord_s gpserr;
-    int    i = lgw_gps_get(NULL, NULL, &coord, &gpserr);
+    int    i = lgw_gps_get(NULL, NULL, &coord);
 
     /* update gateway coordinates */
     xSemaphoreTake(mx_meas_gps, portMAX_DELAY);
     if (i == LGW_GPS_SUCCESS) {
         gps_coord_valid = true;
         meas_gps_coord = coord;
-        meas_gps_err = gpserr;
         // TODO: report other GPS statistics (typ. signal quality & integrity)
     } else {
         gps_coord_valid = false;
@@ -3627,7 +3593,7 @@ void thread_gps(void)
         size_t frame_end_idx = 0;
 
         /* blocking non-canonical read on serial port */
-        ssize_t nb_char = read(gps_tty_fd, serial_buff + wr_idx, LGW_GPS_MIN_MSG_SIZE);
+        ssize_t nb_char = uart_read_bytes(gps_uart_num, serial_buff + wr_idx, LGW_GPS_MIN_MSG_SIZE, 100);
         if (nb_char <= 0) {
             MSG("WARNING: [gps] read() returned value %zd\n", nb_char);
             continue;
@@ -3677,6 +3643,7 @@ void thread_gps(void)
                         /* checksum failed */
                         frame_size = 0;
                     } else if (latest_msg == NMEA_RMC) { /* Get location from RMC frames */
+                        gps_process_sync();
                         gps_process_coords();
                     }
                 }
@@ -4140,7 +4107,7 @@ static void wifi_sta_event_handler(void *arg, esp_event_base_t event_base,
             esp_sntp_init();
 
             config_wifi_mode(WIFI_MODE_STATION);
-            xTaskCreatePinnedToCore(((TaskFunction_t) mqtt_task), "mqtt", 1*4096, NULL, 6, &mqtt_handle, 0);
+            //xTaskCreatePinnedToCore(((TaskFunction_t) mqtt_task), "mqtt", 1*4096, NULL, 6, &mqtt_handle, 0);
             xTaskCreatePinnedToCore(((TaskFunction_t) pkt_fwd_task), "pkt_fwd", 1*4096, NULL, 6, &pkt_fwd_handle, 0);
         }
     }

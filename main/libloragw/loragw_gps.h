@@ -119,7 +119,7 @@ enum gps_msg {
 @param uart_ptr pointer to a variable to save the UART port number for GPS
 @return success if the function was able to connect and configure a GPS module
 */
-int lgw_gps_enable(char *gps_family, speed_t target_brate, uart_port_t *uart_ptr);
+int lgw_gps_enable(char *gps_family, speed_t target_brate, uart_port_t uart_num);
 
 /**
 @brief Restore GPS serial configuration and close serial device
@@ -173,7 +173,7 @@ format that is exploitable by other functions in that library sub-module.
 If the lgw_parse_nmea/lgw_parse_ubx and lgw_gps_get are used in different
 threads, a mutex lock must be acquired before calling either function.
 */
-int lgw_gps_get(struct timespec *utc, struct timespec *gps_time, struct coord_s *loc, struct coord_s *err);
+int lgw_gps_get(struct timespec *utc, struct timespec *gps_time, struct coord_s *loc);
 
 /**
 @brief Get time and position information from the serial GPS last message received
