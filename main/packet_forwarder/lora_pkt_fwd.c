@@ -4374,7 +4374,7 @@ void app_main(void)
 
     if(gpio_get_level(USER_BUTTON_1) == BUTTON_PRESSED && USER_BUTTON_1 != GPIO_NUM_NC){
         printf("User button 1 is PRESSED, go to soft AP mode\n");
-        soft_ap_mode = true;
+        // soft_ap_mode = true;
     } else if(gpio_get_level(USER_BUTTON_2) == BUTTON_PRESSED && USER_BUTTON_2 != GPIO_NUM_NC){
         printf("User button 2 is PRESSED, go to station mode\n");
         soft_ap_mode = false;
