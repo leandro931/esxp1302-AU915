@@ -1,3 +1,6 @@
+import os
+os.environ["IDF_COMPONENT_MANAGER"] = "0"
+
 from scripts.dump_html import dump
 
 dump(

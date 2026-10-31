@@ -78,7 +78,7 @@ License: Revised BSD License, see LICENSE.TXT file include in the project
 #include <lwip/netdb.h>
 #include "esp_sntp.h"
 
-#include "global_json.h"
+#include "../global_json.h"
 #include "driver/gpio.h"
 
 #include "http_server.h"
